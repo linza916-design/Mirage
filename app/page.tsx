@@ -2,646 +2,723 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SplashView } from "../components/SplashView";
+import { OnboardingView } from "../components/OnboardingView";
+import { HomeFeedView } from "../components/HomeFeedView";
+import { AuraAssistantView } from "../components/AuraAssistantView";
+import { ShoppingBagView } from "../components/ShoppingBagView";
+import { OrderTrackerView } from "../components/OrderTrackerView";
+import { ProfileView } from "../components/ProfileView";
+import { Product, CartItem, Notification, CommunityPost } from "../lib/types";
+import { products, mockNotifications, mockPosts } from "../lib/data";
 import {
-  Sun,
-  Moon,
-  ShoppingCart,
-  Star,
-  Users,
+  HouseIcon,
   Sparkles,
-  Truck,
-  Gift,
-  Brain,
-  LogOut,
-  ChevronRight,
-  Menu,
+  ShoppingBag,
+  User,
+  Heart,
+  Search,
+  Bell,
   X,
-  CheckCircle2,
-  ShieldCheck,
-  Trash2,
-  Lock,
-  Wallet,
-  Coins,
+  Star,
+  Gift,
+  ArrowRight,
+  Check,
+  Plus,
 } from "lucide-react";
 
-import { Product, Order, FamilyMember } from "../lib/types";
-import SplashScreen from "../components/SplashScreen";
-import Onboarding from "../components/Onboarding";
-import AuthScreens from "../components/AuthScreens";
-import FamilyDashboard from "../components/FamilyDashboard";
-import WellnessAdvisor from "../components/WellnessAdvisor";
-import Marketplace from "../components/Marketplace";
-import DeliveryTracking from "../components/DeliveryTracking";
-import RewardsSharing from "../components/RewardsSharing";
-
 export default function Home() {
-  const [appState, setAppState] = useState<
-    "splash" | "onboarding" | "auth" | "platform"
+  const [activeScreen, setActiveScreen] = useState<
+    | "splash"
+    | "onboarding"
+    | "home"
+    | "wishlist"
+    | "aura"
+    | "bag"
+    | "tracker"
+    | "profile"
   >("splash");
-  const [activeTab, setActiveTab] = useState<
-    "dashboard" | "advisor" | "marketplace" | "delivery" | "rewards"
-  >("dashboard");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [user, setUser] = useState<{ name: string; email: string } | null>(
-    null,
-  );
+  const [skinType, setSkinType] = useState<string>("Combined");
+  const [concerns, setConcerns] = useState<string[]>(["hydration", "glow"]);
 
-  // Cart logic
-  const [cart, setCart] = useState<
-    { product: Product; qty: number; isSub: boolean }[]
-  >([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [currentCredits, setCurrentCredits] = useState(140.0);
-  const [checkoutStep, setCheckoutStep] = useState<
-    "none" | "processing" | "success"
-  >("none");
-  const [lastTxId, setLastTxId] = useState("");
+  // Shopping and saving state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [wishlistIds, setWishlistIds] = useState<string[]>([
+    "azure_renewal",
+    "gold_lipstick",
+  ]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const [advisorOverride, setAdvisorOverride] = useState("");
+  // Widget notifications states
+  const [notifDropdown, setNotifDropdown] = useState<boolean>(false);
+  const [notifications, setNotifications] =
+    useState<Notification[]>(mockNotifications);
 
-  // Mobile Menu Layout Toggle
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Custom successful petal/sparkle floating animation triggers
+  const [showCheckoutSuccess, setShowCheckoutSuccess] =
+    useState<boolean>(false);
 
-  // Handle Theme Toggle
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+  // Bottom search query parameters
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Ritual step counter
+  const handleOnboardingComplete = (
+    skin: string,
+    primaryConcerns: string[],
+  ) => {
+    setSkinType(skin);
+    setConcerns(primaryConcerns);
+    setActiveScreen("home");
   };
 
-  const handleAskAdvisor = (query: string) => {
-    setAdvisorOverride(query);
-    setActiveTab("advisor");
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
   };
 
-  const handleAddToCart = (product: Product, qty: number, isSub: boolean) => {
-    setCart((prev) => {
-      const exists = prev.find(
-        (item) => item.product.id === product.id && item.isSub === isSub,
-      );
+  const handleAddToBag = (product: Product) => {
+    setCart((prevCart) => {
+      const exists = prevCart.find((item) => item.product.id === product.id);
       if (exists) {
-        return prev.map((item) =>
-          item.product.id === product.id && item.isSub === isSub
-            ? { ...item, qty: item.qty + qty }
+        return prevCart.map((item) =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
             : item,
         );
       }
-      return [...prev, { product, qty, isSub }];
+      return [...prevCart, { product, quantity: 1 }];
     });
   };
 
-  const handleRemoveFromCart = (productId: string, isSub: boolean) => {
-    setCart((prev) =>
-      prev.filter(
-        (item) => !(item.product.id === productId && item.isSub === isSub),
-      ),
+  const handleRemoveFromBag = (product: Product) => {
+    setCart((prevCart) =>
+      prevCart.filter((item) => item.product.id !== product.id),
     );
   };
 
-  // Safe credit deduction
-  const applyRedeemCredits = (amount: number) => {
-    setCurrentCredits((prev) => Math.max(0, prev - amount));
+  const handleUpdateQty = (product: Product, d: number) => {
+    setCart((prevCart) => {
+      return prevCart
+        .map((item) => {
+          if (item.product.id === product.id) {
+            const nextQty = item.quantity + d;
+            return { ...item, quantity: nextQty };
+          }
+          return item;
+        })
+        .filter((item) => item.quantity > 0);
+    });
   };
 
-  const handleAuthSuccess = (userData: { name: string; email: string }) => {
-    setUser(userData);
-
-    setAppState("platform");
+  const handleToggleWishlist = (product: Product) => {
+    setWishlistIds((prev) => {
+      if (prev.includes(product.id)) {
+        return prev.filter((id) => id !== product.id);
+      }
+      return [...prev, product.id];
+    });
   };
 
-  const handleFlutterwaveCheckout = () => {
-    setCheckoutStep("processing");
-    const mockTxId = "FLW-TX-" + Math.floor(100000 + Math.random() * 900000);
-    setLastTxId(mockTxId);
-
-    // Simulate payment response
+  const handleAuthorizeCheckout = () => {
+    // Escrow authorized, trigger elegant petal overlay
+    setCart([]);
+    setShowCheckoutSuccess(true);
     setTimeout(() => {
-      setCheckoutStep("success");
-      setCart([]);
-    }, 2800);
+      setShowCheckoutSuccess(false);
+      setActiveScreen("tracker");
+    }, 4500);
   };
 
-  // Calc cart prices
-  const cartSubtotal = cart.reduce((total, item) => {
-    const unitPrice = item.isSub
-      ? item.product.price * 0.85
-      : item.product.price;
-    return total + unitPrice * item.qty;
-  }, 0);
-
-  const cartCount = cart.reduce((count, item) => count + item.qty, 0);
-
-  // Transitions inside components
-  if (appState === "splash") {
-    return <SplashScreen onComplete={() => setAppState("onboarding")} />;
-  }
-
-  if (appState === "onboarding") {
-    return <Onboarding onComplete={() => setAppState("auth")} />;
-  }
-
-  if (appState === "auth") {
-    return <AuthScreens onSuccess={handleAuthSuccess} />;
-  }
+  const filteredSearchProducts =
+    searchQuery.trim() === ""
+      ? products
+      : products.filter(
+          (p) =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.category.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
 
   return (
-    <div
-      className={`min-h-screen ${theme === "dark" ? "bg-[#061b0e] text-cream" : "bg-cream text-primary"} transition-colors duration-300 font-sans flex flex-col`}
-    >
-      {/* Platform Header */}
-      <nav
-        className={`fixed top-0 w-full h-20 z-40 flex items-center justify-between px-6 md:px-16 border-b ${
-          theme === "dark"
-            ? "bg-[#061b0e]/82 border-white/10"
-            : "bg-cream/82 border-outline-variant/10"
-        } backdrop-blur-md`}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#C5A059] to-[#8E6D31] rounded-full flex items-center justify-center shrink-0">
-            <span className="text-black text-xs font-serif font-extrabold">
-              DX
-            </span>
-          </div>
-          <span className="font-sans text-2xl font-bold tracking-tighter text-white">
-            DIXON
-          </span>
-          <div className="h-6 w-[1px] bg-white/20 hidden md:block"></div>
-          <div className="hidden md:flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[#C5A059]">
-            <div className="w-2 h-2 rounded-full bg-[#C5A059] animate-pulse"></div>
-            Verified Platform Status: Active
-          </div>
-        </div>
+    <div className="relative min-h-screen bg-[#fcf8f7] text-[#1a1a1a] flex flex-col justify-between overflow-x-hidden font-sans">
+      {/* UI Decors - Artistic Flair theme ambient visual glow accents */}
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-rose-200/30 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute -bottom-24 -right-24 w-112.5 h-112.5 bg-indigo-100/30 rounded-full blur-[120px] pointer-events-none z-0"></div>
 
-        {/* Large Screen Navigation Tabs */}
-        <div className="hidden lg:flex items-center gap-1.5 bg-cream-dark/40 dark:bg-primary-container/20 p-1.5 rounded-full border border-outline-variant/5">
-          {[
-            {
-              id: "dashboard",
-              label: "My Family",
-              icon: <Users className="w-4 h-4" />,
-            },
-            {
-              id: "advisor",
-              label: "AI consultation",
-              icon: <Brain className="w-4 h-4" />,
-            },
-            {
-              id: "marketplace",
-              label: "Supplement store",
-              icon: <Star className="w-4 h-4 text-secondary-container" />,
-            },
-            {
-              id: "delivery",
-              label: "Active shipments",
-              icon: <Truck className="w-4 h-4" />,
-            },
-            {
-              id: "rewards",
-              label: "Wellness awards",
-              icon: <Gift className="w-4 h-4" />,
-            },
-          ].map((tab) => {
-            const isSelected = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold leading-none rounded-full transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-primary text-white shadow-md font-sans"
-                    : "text-outline hover:bg-cream dark:hover:bg-white/5"
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Dynamic Controls Side */}
-        <div className="flex items-center gap-3">
-          {/* Light/Dark Mode Switch */}
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 bg-white/40 dark:bg-white/10 rounded-full border border-outline-variant/10 hover:shadow-sm cursor-pointer transition-all"
-            title="Toggle theme visual model"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-primary" />
-            )}
-          </button>
-
-          {/* Cart Icon trigger */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="p-2.5 bg-white/40 dark:bg-white/10 rounded-full border border-outline-variant/10 hover:shadow-sm cursor-pointer relative transition-all"
-          >
-            <ShoppingCart className="w-4 h-4 text-primary dark:text-cream" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-bold font-mono h-4 w-4 rounded-full flex items-center justify-center animate-bounce">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          {/* Log Out */}
-          <button
-            onClick={() => {
-              setUser(null);
-              setAppState("auth");
-            }}
-            className="p-2.5 bg-white/40 dark:bg-white/10 rounded-full border border-outline-variant/10 hover:bg-red-50 dark:hover:bg-red-950/20 text-outline hover:text-red-600 cursor-pointer transition-colors"
-            title="Logout and Lock Account"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-
-          {/* Mobile responsive toggle */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 bg-primary text-white rounded-xl cursor-pointer"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Nav Menu Drawer */}
+      {/* Dynamic Overlay: Falling Rose Petals/Golden Confetti for checkout completion */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {showCheckoutSuccess && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-20 w-full z-30 flex flex-col space-y-4 p-6 border-b lg:hidden ${
-              theme === "dark"
-                ? "bg-[#061b0e] border-white/10"
-                : "bg-cream border-outline-variant/10"
-            }`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#fcf8f7]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6"
           >
-            {[
-              {
-                id: "dashboard",
-                label: "My Family",
-                icon: <Users className="w-4 h-4" />,
-              },
-              {
-                id: "advisor",
-                label: "AI consultation",
-                icon: <Brain className="w-4 h-4" />,
-              },
-              {
-                id: "marketplace",
-                label: "Supplement store",
-                icon: <Star className="w-4 h-4" />,
-              },
-              {
-                id: "delivery",
-                label: "Active shipments",
-                icon: <Truck className="w-4 h-4" />,
-              },
-              {
-                id: "rewards",
-                label: "Wellness awards",
-                icon: <Gift className="w-4 h-4" />,
-              },
-            ].map((tab) => {
-              const isSelected = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as any);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`flex items-center gap-3 p-4 text-sm font-bold font-sans rounded-2xl w-full text-left cursor-pointer transition-all ${
-                    isSelected
-                      ? "bg-primary text-white"
-                      : "text-outline hover:bg-cream-dark/20"
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              );
-            })}
+            {/* Ambient falling elements simulating rose petals */}
+            {Array.from({ length: 24 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{
+                  y: -50,
+                  x: Math.random() * window.innerWidth - window.innerWidth / 2,
+                  rotate: 0,
+                  opacity: 0.8,
+                }}
+                animate={{
+                  y: window.innerHeight + 50,
+                  x:
+                    Math.random() * window.innerWidth -
+                    window.innerWidth / 2 +
+                    Math.sin(i) * 50,
+                  rotate: 360,
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 2,
+                  repeat: 0,
+                  ease: "linear",
+                }}
+                className="absolute w-5 h-5 rounded-full bg-rose-300/40 blur-[1px]"
+                style={{
+                  top: "-10px",
+                  borderRadius: "50% 0 50% 50%",
+                  transform: "rotate(45deg)",
+                }}
+              />
+            ))}
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-col items-center gap-6 text-center max-w-sm"
+            >
+              <div className="w-20 h-20 rounded-full bg-rose-400/20 border border-rose-300 flex items-center justify-center text-rose-500 shadow-xl animate-pulse">
+                <Check size={36} className="stroke-[3px]" />
+              </div>
+              <div>
+                <span className="text-xs uppercase text-rose-400 tracking-[0.2em] font-mono block">
+                  ATELIER SUCCESSION
+                </span>
+                <h3 className="text-2xl font-serif italic font-black text-[#1a1a1a] mt-2">
+                  Your Ritual is Sealed
+                </h3>
+                <p className="text-xs text-[#8a817c] font-light leading-relaxed mt-3">
+                  Pristine premium cosmetics orders processed successfully via
+                  specialized Flutterwave Escrow. Your package status
+                  MRG-8829410 is activated.
+                </p>
+              </div>
+              <span className="text-[10px] text-stone-400 font-mono tracking-widest uppercase mt-4 block">
+                TRANSITING COURIER SCREEN LOAD...
+              </span>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main workspace workspace area */}
-      <main className="flex-grow pt-28 pb-16 px-6 md:px-16 max-w-7xl mx-auto w-full">
-        {/* User Greeting Indicator */}
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-light-outline/5 pb-5">
-          <div className="font-sans">
-            <span className="text-[10px] font-mono tracking-widest text-outline uppercase">
-              Welcome to your workspace
-            </span>
-            <h2 className="font-serif text-2xl md:text-3xl font-extrabold text-primary dark:text-cream leading-none mt-1">
-              Sarah's Wellness Sanctuary
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs bg-white/75 dark:bg-white/5 border border-outline-variant/10 px-4.5 py-2.5 rounded-full font-sans font-semibold">
-            <div className="p-1 bgColor bg-secondary text-white rounded-full">
-              <ShieldCheck className="w-3.5 h-3.5" />
-            </div>
-            Dixon Identity Verified Member
-          </div>
-        </div>
-
-        {/* Navigation Router views */}
-        <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
+        {activeScreen === "splash" && (
           <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.28 }}
+            key="splash_screen"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6 }}
           >
-            {activeTab === "dashboard" && (
-              <FamilyDashboard onAskAdvisor={handleAskAdvisor} />
-            )}
-
-            {activeTab === "advisor" && (
-              <WellnessAdvisor
-                overridePrompt={advisorOverride}
-                clearOverride={() => setAdvisorOverride("")}
-              />
-            )}
-
-            {activeTab === "marketplace" && (
-              <Marketplace
-                onAddToCart={handleAddToCart}
-                activeCartCount={cartCount}
-              />
-            )}
-
-            {activeTab === "delivery" && <DeliveryTracking />}
-
-            {activeTab === "rewards" && (
-              <RewardsSharing
-                currentCredits={currentCredits}
-                onRedeemCredits={applyRedeemCredits}
-              />
-            )}
+            <SplashView onExplore={() => setActiveScreen("onboarding")} />
           </motion.div>
-        </AnimatePresence>
-      </main>
+        )}
 
-      {/* Dynamic Slide Drawer for Shopping Cart */}
-      <AnimatePresence>
-        {isCartOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-[#061b0e] z-50 cursor-pointer"
-            />
+        {activeScreen === "onboarding" && (
+          <motion.div
+            key="onboarding_screen"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <OnboardingView onComplete={handleOnboardingComplete} />
+          </motion.div>
+        )}
 
-            {/* Slide block */}
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className={`fixed top-0 right-0 h-full w-full max-w-md z-50 shadow-2xl flex flex-col justify-between ${
-                theme === "dark"
-                  ? "bg-[#092212] text-cream border-l border-white/5"
-                  : "bg-white text-primary border-l border-outline-variant/20"
-              }`}
-            >
-              {/* Cart Drawer Header */}
-              <div className="p-6 border-b border-light-outline/5 bg-cream/10 flex justify-between items-center bg-cream/35">
-                <div className="flex items-center gap-1.5">
-                  <ShoppingCart className="w-5 h-5 text-secondary" />
-                  <h4 className="font-serif text-xl font-bold">
-                    Shopping Cart
-                  </h4>
-                  <span className="text-xs px-2.5 py-0.5 bg-primary/5 text-primary border border-outline-variant/10 rounded-full font-bold ml-1">
-                    {cartCount} items
-                  </span>
-                </div>
+        {activeScreen !== "splash" && activeScreen !== "onboarding" && (
+          <motion.div
+            key="dashboard_layout"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col min-h-screen"
+          >
+            {/* Top Premium Editorial Header Navigation */}
+            <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-md border-b border-[#eeeae6] px-6 py-4 flex justify-between items-center max-w-5xl w-full mx-auto rounded-b-[2rem]">
+              <div
+                className="flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setActiveScreen("home")}
+              >
+                <h1 className="font-serif text-3xl font-black italic tracking-tighter text-[#1a1a1a]">
+                  Mirage
+                </h1>
+                <div className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
+              </div>
+
+              {/* Central Quick/Live Navigation Icons */}
+              <div className="flex gap-6 text-xs uppercase tracking-widest font-medium text-[#1a1a1a]/60">
                 <button
-                  onClick={() => setIsCartOpen(false)}
-                  className="p-1.5 hover:bg-primary/5 rounded-full cursor-pointer transition-colors"
+                  onClick={() => setActiveScreen("home")}
+                  className={`hover:text-[#1a1a1a] tracking-wider cursor-pointer transition-all ${activeScreen === "home" ? "text-[#d4af37] font-bold border-b-2 border-[#d4af37]/40 pb-0.5" : ""}`}
                 >
-                  <X className="w-5 h-5" />
+                  Discover
+                </button>
+                <button
+                  onClick={() => setActiveScreen("wishlist")}
+                  className={`hover:text-[#1a1a1a] tracking-wider cursor-pointer transition-all ${activeScreen === "wishlist" ? "text-[#d4af37] font-bold border-b-2 border-[#d4af37]/40 pb-0.5" : ""}`}
+                >
+                  Saved List
+                </button>
+                <button
+                  onClick={() => setActiveScreen("aura")}
+                  className={`hover:text-[#1a1a1a] tracking-wider cursor-pointer transition-all flex items-center gap-1 ${activeScreen === "aura" ? "text-rose-500 font-bold border-b-2 border-rose-300 pb-0.5" : ""}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                  Aura AI
                 </button>
               </div>
 
-              {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-none">
-                {/* Checkout processing overlays */}
-                {checkoutStep === "processing" && (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full border-4 border-secondary border-t-transparent animate-spin" />
-                      <Lock className="w-6 h-6 text-[#2c676c] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                    </div>
-                    <div>
-                      <h4 className="font-serif text-xl font-bold text-[#336d72]">
-                        Flutterwave Processing
-                      </h4>
-                      <p className="text-xs text-outline mt-1.5 max-w-xs mx-auto leading-relaxed">
-                        Initializing secure payment gateways. Validating
-                        credentials and card details across verification
-                        accounts...
-                      </p>
-                    </div>
-                  </div>
-                )}
+              {/* Notifications Widget Trigger and Counter */}
+              <div className="relative flex items-center gap-3">
+                <button
+                  id="notifications-button-trigger"
+                  onClick={() => setNotifDropdown(!notifDropdown)}
+                  className="relative p-2 rounded-full border border-[#eeeae6] bg-white hover:bg-stone-50 text-[#1a1a1a] cursor-pointer shadow-sm hover:shadow transition-all"
+                >
+                  <Bell size={14} />
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                </button>
 
-                {checkoutStep === "success" && (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-5 px-4">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-700 mx-auto shadow">
-                      <CheckCircle2 className="w-10 h-10 animate-bounce" />
-                    </div>
-                    <div className="space-y-1 font-sans">
-                      <h4 className="font-serif text-2xl font-bold text-primary">
-                        Transaction Secured!
-                      </h4>
-                      <p className="text-[10px] font-mono text-outline uppercase tracking-wider">
-                        CODE SCAN APPROVED
-                      </p>
-                    </div>
-                    <p className="text-xs text-outline max-w-xs leading-relaxed">
-                      We've successfully debited coordinates via secure
-                      Flutterwave client parameter rules. Transaction code:
-                    </p>
-                    <span className="font-mono bg-cream py-1.5 px-4 rounded-xl border border-outline-variant/20 text-xs font-bold font-mono text-primary select-all">
-                      {lastTxId}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setCheckoutStep("none");
-                        setIsCartOpen(false);
-                        setActiveTab("delivery");
-                      }}
-                      className="px-6 h-10 bg-primary hover:bg-neutral-800 text-white font-bold rounded-full text-xs transition-colors cursor-pointer"
+                {/* Glass dropdown block */}
+                <AnimatePresence>
+                  {notifDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 top-11 w-80 bg-white/95 backdrop-blur-2xl border border-[#eeeae6] p-5 rounded-3xl shadow-xl text-left z-40 max-h-96 overflow-y-auto"
                     >
-                      Track Order Delivery
-                    </button>
-                  </div>
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#eeeae6]">
+                        <span className="text-[10px] text-[#8a817c] font-mono uppercase tracking-widest font-bold">
+                          Client Bulletins
+                        </span>
+                        <button
+                          onClick={() => setNotifDropdown(false)}
+                          className="text-[#8a817c] hover:text-[#1a1a1a]"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-col gap-3">
+                        {notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            className="text-xs p-3 rounded-2xl hover:bg-[#fcf8f7] border border-transparent hover:border-[#eeeae6] flex flex-col gap-1 transition-all"
+                          >
+                            <div className="flex justify-between items-center text-[10px] font-bold text-rose-500 font-mono tracking-tight">
+                              <span>⭐ {notif.title}</span>
+                              <span className="text-[#8a817c] font-normal">
+                                {notif.timeAgo}
+                              </span>
+                            </div>
+                            <p className="text-[#8a817c] text-[11px] leading-relaxed font-light">
+                              {notif.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </header>
+
+            {/* Main Application Area (5xl standard layout centering) */}
+            <main className="flex-1 max-w-5xl w-full mx-auto py-8">
+              <AnimatePresence mode="wait">
+                {activeScreen === "home" && (
+                  <motion.div
+                    key="home_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <HomeFeedView
+                      onSelectProduct={handleSelectProduct}
+                      onAddToBag={handleAddToBag}
+                      onToggleWishlist={handleToggleWishlist}
+                      wishlistedIds={wishlistIds}
+                      skinType={skinType}
+                    />
+                  </motion.div>
                 )}
 
-                {/* Normal cart items layout */}
-                {checkoutStep === "none" && (
-                  <>
-                    {cart.length === 0 ? (
-                      <div className="h-72 flex flex-col items-center justify-center text-center text-outline">
-                        <ShoppingCart className="w-8 h-8 text-[#eae8e3] mb-3" />
-                        <p className="text-xs font-semibold">
-                          Your supplement cart is currently empty.
-                        </p>
-                        <p className="text-[11px] mt-1 text-outline-variant shadow-inner">
-                          Browse the supplement store to add selections.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {cart.map((item, idx) => {
-                          const unitPrice = item.isSub
-                            ? item.product.price * 0.85
-                            : item.product.price;
-                          return (
-                            <div
-                              key={idx}
-                              className="p-3.5 bg-cream/35 dark:bg-white/5 rounded-2xl border border-outline-variant/10 flex gap-3.5 items-center justify-between"
-                            >
-                              <img
-                                src={item.product.image}
-                                alt={item.product.name}
-                                referrerPolicy="no-referrer"
-                                className="w-14 h-14 rounded-xl object-cover shrink-0"
-                              />
+                {activeScreen === "wishlist" && (
+                  <motion.div
+                    key="wishlist_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="px-4 md:px-0"
+                  >
+                    <div className="flex flex-col gap-6 text-left">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 pb-4 border-b border-[#eeeae6]">
+                        <div>
+                          <span className="text-[10px] tracking-widest text-[#d4af37] uppercase font-mono font-bold">
+                            YOUR ATELIER SELECTIONS
+                          </span>
+                          <h3 className="text-2xl font-serif italic text-[#1a1a1a]">
+                            Saved Wishlist ({wishlistIds.length} items)
+                          </h3>
+                        </div>
 
-                              <div className="flex-1 min-w-0 font-sans">
-                                <h5 className="font-serif text-xs font-bold text-primary dark:text-cream truncate">
-                                  {item.product.name}
-                                </h5>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="text-[10px] text-outline">
-                                    Qty: {item.qty}
+                        {/* Dynamic search query fields */}
+                        <div className="relative">
+                          <input
+                            id="wishlist-search-bar"
+                            type="text"
+                            placeholder="Filter saved beauties..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-white/80 outline-none border border-[#eeeae6] px-4 py-2 pl-9 rounded-full text-xs text-[#1a1a1a] placeholder-[#8a817c] tracking-wide focus:border-rose-400 w-full sm:w-60 shadow-sm"
+                          />
+                          <Search
+                            size={12}
+                            className="absolute left-3.5 top-3 text-[#8a817c]"
+                          />
+                        </div>
+                      </div>
+
+                      {wishlistIds.length === 0 ? (
+                        <div className="py-20 text-center flex flex-col items-center gap-4 bg-white/40 border border-[#eeeae6] rounded-3xl p-8">
+                          <Heart
+                            size={36}
+                            className="text-stone-300 animate-pulse"
+                          />
+                          <span className="text-xs text-[#8a817c] font-mono">
+                            NO ITEMS SAVED YET
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                          {filteredSearchProducts
+                            .filter((p) => wishlistIds.includes(p.id))
+                            .map((p) => (
+                              <div
+                                key={p.id}
+                                className="bg-white border border-[#eeeae6] rounded-[2rem] p-4 flex flex-col gap-3 text-left relative shadow-sm hover:shadow-md transition-all duration-300"
+                              >
+                                <img
+                                  src={p.image}
+                                  alt={p.name}
+                                  className="aspect-square w-full rounded-2xl object-cover bg-stone-100 cursor-pointer"
+                                  onClick={() => handleSelectProduct(p)}
+                                />
+                                <div>
+                                  <span className="text-[8px] uppercase tracking-widest text-[#d4af37] font-mono font-bold block">
+                                    {p.brand}
                                   </span>
-                                  <span className="text-[10px] font-bold text-primary bg-primary/5 dark:bg-white/10 dark:text-cream rounded-full px-2">
-                                    {item.isSub
-                                      ? "Monthly Subscription"
-                                      : "One-Time"}
+                                  <h4
+                                    className="text-sm font-medium text-[#1a1a1a] truncate hover:text-rose-500 cursor-pointer"
+                                    onClick={() => handleSelectProduct(p)}
+                                  >
+                                    {p.name}
+                                  </h4>
+                                  <span className="text-xs text-[#8a817c] font-mono">
+                                    ${p.price.toFixed(2)}
                                   </span>
                                 </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    id={`wishlist-add-bag-${p.id}`}
+                                    onClick={() => handleAddToBag(p)}
+                                    className="flex-1 h-10 bg-[#1a1a1a] hover:bg-[#333] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                                  >
+                                    Add bag
+                                  </button>
+                                  <button
+                                    id={`wishlist-remove-${p.id}`}
+                                    onClick={() => handleToggleWishlist(p)}
+                                    className="w-10 h-10 rounded-xl bg-stone-50 border border-[#eeeae6] hover:bg-rose-50 hover:text-rose-500 hover:border-rose-250 flex items-center justify-center text-[#8a817c] cursor-pointer transition-all"
+                                  >
+                                    <Trash2Icon />
+                                  </button>
+                                </div>
                               </div>
-
-                              <div className="text-right shrink-0">
-                                <p className="font-serif text-xs font-bold text-primary dark:text-cream price font-bold">
-                                  ${(unitPrice * item.qty).toFixed(2)}
-                                </p>
-                                <button
-                                  onClick={() =>
-                                    handleRemoveFromCart(
-                                      item.product.id,
-                                      item.isSub,
-                                    )
-                                  }
-                                  className="text-[10px] font-semibold text-red-600 hover:underline mt-1 cursor-pointer inline-flex items-center gap-1 align-middle"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
 
-              {/* Cart Drawer Footer */}
-              {checkoutStep === "none" && cart.length > 0 && (
-                <div className="p-6 border-t border-outline-variant/15 bg-cream/15">
-                  <div className="space-y-3 font-sans">
-                    {/* Subtotal */}
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-outline font-medium">
-                        Subtotal Selected
-                      </span>
-                      <span className="font-bold text-primary dark:text-cream font-mono">
-                        ${cartSubtotal.toFixed(2)}
-                      </span>
-                    </div>
+                {activeScreen === "aura" && (
+                  <motion.div
+                    key="aura_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <AuraAssistantView
+                      skinType={skinType}
+                      concerns={concerns}
+                      onAddToBag={handleAddToBag}
+                      onSelectProduct={handleSelectProduct}
+                    />
+                  </motion.div>
+                )}
 
-                    {/* Applied Credits if any */}
-                    <div className="flex justify-between items-center text-xs py-1 text-green-700">
-                      <span className="font-semibold flex items-center gap-1 text-xs">
-                        <Wallet className="w-3.5 h-3.5 text-green-700" />{" "}
-                        Applicable Credits Discount (100% applied)
-                      </span>
-                      <span className="font-bold font-mono">
-                        -${Math.min(cartSubtotal, currentCredits).toFixed(2)}
-                      </span>
-                    </div>
+                {activeScreen === "bag" && (
+                  <motion.div
+                    key="bag_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ShoppingBagView
+                      cartItems={cart}
+                      onUpdateQty={handleUpdateQty}
+                      onRemoveItem={handleRemoveFromBag}
+                      onPlaceOrder={handleAuthorizeCheckout}
+                    />
+                  </motion.div>
+                )}
 
-                    <div className="border-t border-outline-variant/10 my-3" />
+                {activeScreen === "tracker" && (
+                  <motion.div
+                    key="tracker_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <OrderTrackerView />
+                  </motion.div>
+                )}
 
-                    {/* Final Pay Amount */}
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-sm font-bold text-primary dark:text-cream">
-                        Grand Total Billed
-                      </span>
-                      <span
-                        className="font-serif text-3xl font-extrabold text-[#11351e]"
-                        id="cart-grand-total"
-                      >
-                        ${Math.max(0, cartSubtotal - currentCredits).toFixed(2)}
-                      </span>
-                    </div>
+                {activeScreen === "profile" && (
+                  <motion.div
+                    key="profile_panel"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <ProfileView
+                      skinType={skinType}
+                      onChangeSkinType={setSkinType}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </main>
 
-                    {/* Flutterwave Pay secure action */}
-                    <button
-                      onClick={handleFlutterwaveCheckout}
-                      className="w-full h-12 bg-primary text-white hover:bg-neutral-800 rounded-full font-serif text-md font-bold transition-all shadow-lg flex items-center justify-center gap-2 mt-4 cursor-pointer"
-                    >
-                      <Lock className="w-4 h-4 text-white" />
-                      Secure with Flutterwave Gateway
-                    </button>
+            {/* Bottom Glassmorphism Navigation Sheet */}
+            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-md bg-[#1a1a1a] border border-white/10 px-6 py-4 rounded-[2rem] flex justify-between items-center shadow-2xl">
+              <button
+                id="nav-btn-home"
+                onClick={() => setActiveScreen("home")}
+                className={`flex flex-col items-center gap-1 transition-colors cursor-pointer ${activeScreen === "home" ? "text-rose-300" : "text-stone-400 hover:text-stone-200"}`}
+              >
+                <HouseIcon
+                  size={18}
+                  className={activeScreen === "home" ? "fill-rose-300/10" : ""}
+                />
+                <span className="text-[9px] font-mono select-none">
+                  Atelier
+                </span>
+              </button>
 
-                    <p className="text-[10px] text-center text-outline leading-tight mt-1 pt-1.5 font-sans">
-                      By proceeding, you agree to DiXon subscription terms.
-                      Cancel penalty free via dashboard at any time. Verified
-                      non-toxic.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </>
+              <button
+                id="nav-btn-wish"
+                onClick={() => setActiveScreen("wishlist")}
+                className={`flex flex-col items-center gap-1 transition-colors cursor-pointer ${activeScreen === "wishlist" ? "text-rose-300" : "text-stone-400 hover:text-stone-200"}`}
+              >
+                <Heart
+                  size={18}
+                  className={
+                    activeScreen === "wishlist" ? "fill-rose-300/10" : ""
+                  }
+                />
+                <span className="text-[9px] font-mono select-none">Saved</span>
+              </button>
+
+              <button
+                id="nav-btn-aura"
+                onClick={() => setActiveScreen("aura")}
+                className={`relative flex flex-col items-center gap-1 transition-all cursor-pointer -mt-5 bg-linear-to-tr from-[#1a1a1a] to-rose-950 border border-rose-300/40 p-4 rounded-full w-14 h-14 justify-center shadow-2xl hover:scale-105 active:scale-95 ${
+                  activeScreen === "aura"
+                    ? "text-[#fff] border-rose-300 scale-105"
+                    : "text-stone-300"
+                }`}
+              >
+                <Sparkles size={18} className="text-rose-300" />
+              </button>
+
+              <button
+                id="nav-btn-bag"
+                onClick={() => setActiveScreen("bag")}
+                className={`relative flex flex-col items-center gap-1 transition-colors cursor-pointer ${activeScreen === "bag" ? "text-rose-300" : "text-stone-400 hover:text-stone-200"}`}
+              >
+                <ShoppingBag
+                  size={18}
+                  className={activeScreen === "bag" ? "fill-rose-300/10" : ""}
+                />
+                <span className="text-[9px] font-mono select-none">Bag</span>
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-2 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-rose-450 bg-rose-350 text-[#1a1a1a] animate-bounce font-mono">
+                    {cart.reduce((acc, curr) => acc + curr.quantity, 0)}
+                  </span>
+                )}
+              </button>
+
+              <button
+                id="nav-btn-profile"
+                onClick={() => setActiveScreen("profile")}
+                className={`flex flex-col items-center gap-1 transition-colors cursor-pointer ${activeScreen === "profile" ? "text-rose-300" : "text-stone-400 hover:text-stone-200"}`}
+              >
+                <User
+                  size={18}
+                  className={
+                    activeScreen === "profile" ? "fill-rose-300/10" : ""
+                  }
+                />
+                <span className="text-[9px] font-mono select-none">
+                  VIP VIP
+                </span>
+              </button>
+            </nav>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Humble Footer brand credits */}
-      <footer className="py-8 bg-cream-dark/15 border-t border-light-outline/5 text-center text-xs text-outline font-medium shrink-0 font-sans">
-        <p>© 2026 DiXon Premium Supplement Marketplace. All rights reserved.</p>
-        <p className="text-[10px] text-[#737973] uppercase tracking-widest mt-1">
-          Nurtured Trust & Security
-        </p>
-      </footer>
+      {/* Slide-Up Detail drawer overview when user selects product card */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#1a1a1a]/40 backdrop-blur-sm z-50 flex items-end justify-center"
+            onClick={() => setSelectedProduct(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
+              className="w-full max-w-lg bg-white border border-[#eeeae6] border-b-none p-6 rounded-t-[3rem] shadow-2xl flex flex-col gap-5 text-left text-[#1a1a1a]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex justify-between items-start pb-2 border-b border-[#eeeae6]">
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-[#d4af37] font-mono tracking-widest uppercase font-bold">
+                    {selectedProduct.brand}
+                  </span>
+                  <h4 className="text-xl font-serif italic text-[#1a1a1a] tracking-wide">
+                    {selectedProduct.name}
+                  </h4>
+                </div>
+                <button
+                  id="close-product-drawer"
+                  onClick={() => setSelectedProduct(null)}
+                  className="p-1.5 rounded-full bg-stone-50 border border-[#eeeae6] hover:bg-stone-100 text-[#8a817c] cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Product Info columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="aspect-[4/3] sm:aspect-[4/5] rounded-2xl overflow-hidden bg-stone-50 border border-[#eeeae6]">
+                  <img
+                    src={selectedProduct.image}
+                    alt={selectedProduct.name}
+                    className="w-full h-full object-cover animate-fade-in"
+                  />
+                </div>
+                <div className="flex flex-col justify-between text-xs font-sans">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1">
+                      <Star
+                        size={12}
+                        className="fill-amber-400 stroke-amber-400"
+                      />
+                      <span className="text-[#1a1a1a] font-mono font-bold">
+                        {selectedProduct.rating} / 5
+                      </span>
+                      <span className="text-[#8a817c]">
+                        • Verified assessment
+                      </span>
+                    </div>
+
+                    <p className="text-stone-600 leading-relaxed font-light mt-1 text-[11px]">
+                      {selectedProduct.description}
+                    </p>
+
+                    <span className="text-[10px] text-[#8a817c] font-mono uppercase tracking-widest block mt-2 font-bold">
+                      Active Benefits:
+                    </span>
+                    <ul className="list-disc pl-4 text-[10.5px] text-stone-700 space-y-0.5 mt-0.5 font-light">
+                      {selectedProduct.benefits?.map((b, i) => (
+                        <li key={i}>{b}</li>
+                      )) || (
+                        <li>Dermatologist approved and tested formulations.</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#eeeae6] flex justify-between items-center text-xs font-mono mt-3">
+                    <span className="text-[#8a817c] font-sans">
+                      Size: {selectedProduct.size || "30ml"}
+                    </span>
+                    <span className="text-rose-600 font-bold text-base font-semibold">
+                      ${selectedProduct.price.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer actions */}
+              <button
+                id={`drawer-add-bag-${selectedProduct.id}`}
+                onClick={() => {
+                  handleAddToBag(selectedProduct);
+                  setSelectedProduct(null);
+                }}
+                className="w-full h-12 bg-[#1a1a1a] hover:bg-[#333] text-white rounded-xl font-bold tracking-widest uppercase text-xs flex items-center justify-center gap-2 cursor-pointer mt-1 shadow transition-colors"
+              >
+                <ShoppingBag size={13} className="stroke-[2.5px]" /> Add to bag
+                • ${selectedProduct.price.toFixed(2)}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+// Compact helper components to support neat structures
+const Trash2Icon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="lucide lucide-trash-2"
+  >
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    <line x1="10" x2="10" y1="11" y2="17" />
+    <line x1="14" x2="14" y1="11" y2="17" />
+  </svg>
+);

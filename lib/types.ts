@@ -1,61 +1,22 @@
-export interface FamilyMember {
-  id: string;
-  name: string;
-  avatar: string;
-  role: string;
-  goal: string;
-  progress: number;
-  healthScore: number;
-  stamina: string;
-  sleepQuality: string;
-  coatHealth: string; // for Leo the pet or general metabolic/hair/skin vitality
-  nextScanDays: number;
-}
-
 export interface Product {
   id: string;
   name: string;
+  category: 'skincare' | 'makeup' | 'haircare' | 'fragrance' | 'bath';
+  brand: string;
+  price: number;
+  rating: number;
   description: string;
-  price: number;
-  originalPrice?: number;
   image: string;
-  category: string;
-  premiumSelection: boolean;
-  tags: string[];
-  stars: number;
+  size?: string;
+  inStock?: boolean;
+  benefits?: string[];
+  isWishlisted?: boolean;
 }
 
-export interface OrderItem {
-  productId: string;
-  name: string;
-  image: string;
-  price: number;
-  qty: number;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  status: 'In Transit' | 'Delivered' | 'Processing';
-  total: number;
-  items: OrderItem[];
-  carrier: string;
-  trackingNumber: string;
-  shippingAddress: {
-    name: string;
-    line1: string;
-    cityStateZip: string;
-  };
-  stepperIndex: number; // 1 to 5 corresponding to the stages
-}
-
-export interface Referral {
-  id: string;
-  name: string;
-  joinedDate: string;
-  status: 'Successful' | 'Pending';
-  credit: number;
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  selectedVariant?: string;
 }
 
 export interface Message {
@@ -63,5 +24,38 @@ export interface Message {
   sender: 'user' | 'ai';
   text: string;
   timestamp: string;
-  groundingSources?: { title: string; uri: string }[];
+  imageAnalysis?: string;
+  recommendations?: Product[];
+}
+
+export interface CommunityPost {
+  id: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatar: string;
+  content: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  timestamp: string;
+  rating?: number;
+  shopProduct?: Product;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  timeAgo: string;
+  type: 'price_drop' | 'shipping' | 'editorial' | 'invitation';
+  image?: string;
+}
+
+export interface UserRitual {
+  id: string;
+  title: string;
+  duration: string;
+  type: 'am' | 'pm' | 'weekly';
+  image: string;
+  items: string[];
 }

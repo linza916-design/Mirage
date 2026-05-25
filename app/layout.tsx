@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DiXon - Family Wellness Platform",
+  title: "Mirage  - Mirror, Mirror on the Wall, Who's the Fairest of Them All?",
   description:
-    "DiXon is a family wellness platform that provides personalized health insights, secure medical data management, and a rewards program for healthy behaviors. Our mission is to empower families to take control of their health and well-being with trusted, secure, and innovative solutions.",
+    "Desire for beauty, love for simplicity, and craving for innovation. These are the core values that drive us to create delightful products that make people's lives better.",
 };
 
 export default function RootLayout({
