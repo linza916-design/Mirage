@@ -7,7 +7,6 @@ import {
   Trash2,
   Plus,
   Minus,
-  Tag,
   ShieldCheck,
   CreditCard,
 } from "lucide-react";
@@ -26,18 +25,18 @@ export const ShoppingBagView: React.FC<ShoppingBagProps> = ({
   onRemoveItem,
   onPlaceOrder,
 }) => {
-  const [promoCode, setPromoCode] = useState<string>("");
-  const [discount, setDiscount] = useState<number>(0);
-  const [promoError, setPromoError] = useState<string>("");
-  const [promoSuccess, setPromoSuccess] = useState<boolean>(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [discount, setDiscount] = useState(0);
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState(false);
 
-  // Flutterwave Interactive checkout state
   const [checkoutStep, setCheckoutStep] = useState<
     "cart" | "flutterwave_pay" | "submitting"
   >("cart");
-  const [payEmail, setPayEmail] = useState<string>("elena.rossi@mirage.com");
-  const [payName, setPayName] = useState<string>("Elena Rossi");
-  const [payPhone, setPayPhone] = useState<string>("+1 (555) 941-1002");
+
+  const [payEmail, setPayEmail] = useState("elena.rossi@mirage.com");
+  const [payName, setPayName] = useState("Elena Rossi");
+  const [payPhone, setPayPhone] = useState("+1 (555) 941-1002");
 
   const applyPromo = () => {
     if (promoCode.trim().toUpperCase() === "MIRAGEGIFT") {
@@ -45,23 +44,23 @@ export const ShoppingBagView: React.FC<ShoppingBagProps> = ({
       setPromoSuccess(true);
       setPromoError("");
     } else {
-      setPromoError('Unknown luxury token. Try "MIRAGEGIFT" for $20 off.');
+      setPromoError('Unknown token. Try "MIRAGEGIFT"');
       setPromoSuccess(false);
       setDiscount(0);
     }
   };
 
-  const getSubtotal = () =>
-    cartItems.reduce(
-      (acc, current) => acc + current.product.price * current.quantity,
-      0,
-    );
-  const tax = getSubtotal() * 0.08;
-  const delivery = getSubtotal() > 150 ? 0 : 15;
-  const finalTotal = getSubtotal() + tax + delivery - discount;
+  const subtotal = cartItems.reduce(
+    (acc, item) => acc + item.product.price * item.quantity,
+    0,
+  );
+
+  const tax = subtotal * 0.08;
+  const delivery = subtotal > 150 ? 0 : 15;
+  const finalTotal = subtotal + tax + delivery - discount;
 
   const handlePayViaFlutterwave = () => {
-    if (cartItems.length === 0) return;
+    if (!cartItems.length) return;
     setCheckoutStep("flutterwave_pay");
   };
 
@@ -73,337 +72,246 @@ export const ShoppingBagView: React.FC<ShoppingBagProps> = ({
   };
 
   return (
-    <div className="w-full pb-24 text-stone-100 font-sans px-4 md:px-0 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center pb-4 border-b border-stone-900">
-        <h3 className="text-lg font-light tracking-widest uppercase text-stone-200">
-          Shopping Bag (
-          {cartItems.reduce((acc, curr) => acc + curr.quantity, 0)} items)
-        </h3>
-        <span className="text-xs font-mono text-stone-500">
-          SECURE DISPATCH
-        </span>
-      </div>
+    <div className="relative max-w-6xl mx-auto px-6 py-10 text-[#1a1a1a]">
+      {/* Ambient glow */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-rose-200/30 rounded-full blur-[140px]" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-100/20 rounded-full blur-[160px]" />
 
-      {cartItems.length === 0 ? (
-        <div className="flex flex-col items-center py-20 gap-4 text-center">
-          <ShoppingBag size={48} className="text-stone-700 stroke-[1.5px]" />
+      <div className="relative z-10">
+        <div className="flex justify-between items-center border-b border-[#eeeae6] pb-5">
           <div>
-            <h4 className="text-base font-light tracking-wide text-stone-300">
-              Your bag is empty
-            </h4>
-            <p className="text-xs text-stone-500 font-light max-w-xs mt-1">
-              Explore our custom collection grids or ask Aura to formulate a
-              glow sequence.
+            <span className="text-[10px] uppercase tracking-[0.25em] text-rose-400 font-mono">
+              MIRAGE CHECKOUT
+            </span>
+            <h2 className="text-3xl font-serif italic font-black mt-1">
+              Shopping Ritual
+            </h2>
+          </div>
+
+          <span className="text-xs text-[#8a817c] font-mono">
+            {cartItems.reduce((a, b) => a + b.quantity, 0)} ITEMS
+          </span>
+        </div>
+
+        {cartItems.length === 0 ? (
+          <div className="py-32 flex flex-col items-center text-center">
+            <ShoppingBag size={50} className="text-rose-200 mb-4" />
+            <h3 className="font-serif italic text-2xl">Your bag is empty</h3>
+            <p className="text-[#8a817c] text-sm mt-2 max-w-sm">
+              Explore premium beauty rituals and discover your signature glow.
             </p>
           </div>
-        </div>
-      ) : (
-        <AnimatePresence mode="wait">
-          {checkoutStep === "cart" && (
-            <motion.div
-              key="cart_screen"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-6"
-            >
-              {/* Left Side: Items List (8 cols) */}
-              <div className="lg:col-span-8 flex flex-col gap-4">
-                {cartItems.map((item) => (
-                  <div
-                    id={`cart-item-${item.product.id}`}
-                    key={item.product.id}
-                    className="p-4 rounded-3xl bg-stone-900/30 border border-stone-850 flex gap-4 items-center"
-                  >
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="w-16 h-20 rounded-xl object-cover bg-stone-950"
-                    />
-
-                    <div className="flex-1 flex flex-col justify-center min-w-0 text-left">
-                      <span className="text-[9px] text-stone-500 uppercase tracking-widest font-mono font-bold">
-                        {item.product.brand}
-                      </span>
-                      <h4 className="text-sm font-medium text-stone-200 truncate">
-                        {item.product.name}
-                      </h4>
-                      <span className="text-xs text-rose-300 font-mono mt-0.5">
-                        ${item.product.price.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Quantity controls */}
-                    <div className="flex items-center gap-1.5 bg-stone-950 border border-stone-850 p-1.5 rounded-xl font-mono">
-                      <button
-                        id={`cart-qty-dec-${item.product.id}`}
-                        onClick={() => onUpdateQty(item.product, -1)}
-                        className="w-6 h-6 rounded bg-stone-900 border border-stone-800 flex items-center justify-center hover:bg-stone-800 text-stone-400 cursor-pointer"
-                      >
-                        <Minus size={10} />
-                      </button>
-                      <span className="text-xs font-semibold px-2 text-stone-200">
-                        {item.quantity}
-                      </span>
-                      <button
-                        id={`cart-qty-inc-${item.product.id}`}
-                        onClick={() => onUpdateQty(item.product, 1)}
-                        className="w-6 h-6 rounded bg-stone-900 border border-stone-800 flex items-center justify-center hover:bg-stone-800 text-stone-400 cursor-pointer"
-                      >
-                        <Plus size={10} />
-                      </button>
-                    </div>
-
-                    {/* Delete trigger */}
-                    <button
-                      id={`cart-remove-${item.product.id}`}
-                      onClick={() => onRemoveItem(item.product)}
-                      className="w-9 h-9 rounded-xl bg-stone-900 border border-stone-800 flex items-center justify-center hover:bg-red-500/10 cursor-pointer text-stone-500 hover:text-red-400 transition-colors"
+        ) : (
+          <AnimatePresence mode="wait">
+            {/* CART */}
+            {checkoutStep === "cart" && (
+              <motion.div
+                key="cart"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid lg:grid-cols-12 gap-8 mt-10"
+              >
+                {/* PRODUCTS */}
+                <div className="lg:col-span-8 flex flex-col gap-5">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.product.id}
+                      className="bg-white/80 backdrop-blur-xl border border-[#eeeae6] rounded-[2rem] p-5 flex items-center gap-5 shadow-lg"
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="w-24 h-28 rounded-2xl object-cover"
+                      />
 
-              {/* Right Side: Totals Card (4 cols) */}
-              <div className="lg:col-span-4 flex flex-col gap-4">
-                {/* Promo Code Input */}
-                <div className="bg-stone-900/40 border border-stone-850 p-5 rounded-[2rem] flex flex-col gap-3 text-left shadow-lg">
-                  <span className="text-[10px] text-stone-500 font-mono tracking-widest uppercase block">
-                    PROMO VOUCHER
-                  </span>
-                  <div className="flex gap-2">
-                    <input
-                      id="promo-input"
-                      type="text"
-                      placeholder="e.g. MIRAGEGIFT"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="flex-1 h-10 bg-stone-950 border border-stone-850 rounded-xl px-3 text-xs tracking-widest text-center focus:outline-none focus:border-rose-300/40 uppercase"
-                    />
-                    <button
-                      onClick={applyPromo}
-                      className="bg-stone-200 text-stone-950 hover:bg-rose-100 text-[10px] px-3 rounded-xl font-semibold uppercase cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {promoError && (
-                    <span className="text-[10px] text-red-400 font-mono">
-                      {promoError}
-                    </span>
-                  )}
-                  {promoSuccess && (
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      <Check size={10} className="stroke-[3px]" /> $20 off
-                      applied!
-                    </span>
-                  )}
+                      <div className="flex-1">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-rose-400">
+                          {item.product.brand}
+                        </span>
+
+                        <h4 className="font-medium text-lg mt-1">
+                          {item.product.name}
+                        </h4>
+
+                        <p className="text-sm text-[#8a817c] mt-1">
+                          ${item.product.price.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 bg-[#fcf8f7] rounded-xl p-2 border border-[#eeeae6]">
+                        <button
+                          onClick={() => onUpdateQty(item.product, -1)}
+                          className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center"
+                        >
+                          <Minus size={14} />
+                        </button>
+
+                        <span className="px-2 font-semibold">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          onClick={() => onUpdateQty(item.product, 1)}
+                          className="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => onRemoveItem(item.product)}
+                        className="w-10 h-10 rounded-xl bg-rose-50 text-rose-400 hover:bg-rose-100 flex items-center justify-center"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Subtotal table */}
-                <div className="bg-stone-900/40 border border-stone-850 p-6 rounded-[2rem] flex flex-col gap-4 text-left shadow-lg">
-                  <span className="text-[10px] text-stone-500 font-mono tracking-widest uppercase block">
-                    SUMS PRESCRIPTION
-                  </span>
+                {/* SUMMARY */}
+                <div className="lg:col-span-4">
+                  <div className="bg-white/80 backdrop-blur-xl border border-[#eeeae6] rounded-[2rem] p-6 shadow-xl">
+                    <span className="text-[10px] uppercase tracking-widest text-[#8a817c] font-mono">
+                      TOTAL SUMMARY
+                    </span>
 
-                  <div className="flex flex-col gap-3 text-xs tracking-wide">
-                    <div className="flex justify-between border-b border-stone-900 pb-2">
-                      <span className="text-stone-400 font-light">
-                        Vanity Bag Subtotal
-                      </span>
-                      <span className="font-mono text-stone-200">
-                        ${getSubtotal().toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between border-b border-stone-900 pb-2">
-                      <span className="text-stone-400 font-light">
-                        Est. State Tax (8%)
-                      </span>
-                      <span className="font-mono text-stone-200">
-                        ${tax.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between border-b border-stone-900 pb-2">
-                      <span className="text-stone-400 font-light">
-                        Luxury Courier Shipping
-                      </span>
-                      <span className="font-mono text-stone-200">
-                        {delivery === 0 ? (
-                          <b className="text-rose-200">FREE</b>
-                        ) : (
-                          `$${delivery.toFixed(2)}`
-                        )}
-                      </span>
-                    </div>
-
-                    {discount > 0 && (
-                      <div className="flex justify-between border-b border-stone-900 pb-2 text-rose-300 font-mono">
-                        <span>VIP Credit Gift</span>
-                        <span>-${discount.toFixed(2)}</span>
+                    <div className="space-y-4 mt-5 text-sm">
+                      <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>${subtotal.toFixed(2)}</span>
                       </div>
+
+                      <div className="flex justify-between">
+                        <span>Tax</span>
+                        <span>${tax.toFixed(2)}</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span>Delivery</span>
+                        <span>{delivery === 0 ? "FREE" : `$${delivery}`}</span>
+                      </div>
+
+                      {discount > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Discount</span>
+                          <span>- ${discount}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t pt-4 flex justify-between text-lg font-semibold">
+                        <span>Total</span>
+                        <span>${finalTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Promo */}
+                    <div className="mt-6 flex gap-2">
+                      <input
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        placeholder="Promo code"
+                        className="flex-1 border border-[#eeeae6] rounded-xl px-4 h-11 text-sm"
+                      />
+                      <button
+                        onClick={applyPromo}
+                        className="px-4 rounded-xl bg-[#1a1a1a] text-white"
+                      >
+                        Apply
+                      </button>
+                    </div>
+
+                    {promoError && (
+                      <p className="text-xs text-red-400 mt-2">{promoError}</p>
                     )}
 
-                    <div className="flex justify-between pt-1 text-sm font-semibold tracking-wide">
-                      <span className="text-stone-100">
-                        Couture Ritual Total
-                      </span>
-                      <span className="font-mono text-rose-200">
-                        ${finalTotal.toFixed(2)}
-                      </span>
+                    {promoSuccess && (
+                      <p className="text-xs text-emerald-500 mt-2 flex items-center gap-1">
+                        <Check size={12} /> Promo applied
+                      </p>
+                    )}
+
+                    <button
+                      onClick={handlePayViaFlutterwave}
+                      className="w-full mt-8 h-14 bg-[#1a1a1a] hover:bg-[#333] text-white rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                    >
+                      Checkout with Flutterwave
+                      <ChevronRight size={14} />
+                    </button>
+
+                    <div className="mt-4 flex justify-center items-center gap-2 text-xs text-[#8a817c]">
+                      <ShieldCheck size={14} />
+                      Secured Payment
                     </div>
                   </div>
-
-                  <button
-                    id="bag-checkout-trigger"
-                    onClick={handlePayViaFlutterwave}
-                    className="w-full h-12 bg-stone-100 hover:bg-rose-100 text-stone-950 rounded-xl font-semibold text-xs tracking-widest uppercase flex items-center justify-center gap-2 cursor-pointer mt-2"
-                  >
-                    Proceed with Flutterwave <ChevronRight size={13} />
-                  </button>
-
-                  <div className="flex items-center gap-1.5 justify-center text-[10px] text-stone-500 font-mono mt-1">
-                    <ShieldCheck size={12} className="text-rose-300" />{" "}
-                    End-to-end encryption active
-                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* Checkout Screen 2: Interactive Flutterwave portal mockup */}
-          {checkoutStep === "flutterwave_pay" && (
-            <motion.div
-              key="flutterwave_screen"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="max-w-md mx-auto bg-stone-950 border border-stone-800 p-8 rounded-[2.5rem] mt-6 flex flex-col gap-6 text-left shadow-2xl relative"
-            >
-              <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-orange-600/10 blur-3xl pointer-events-none" />
+            {/* FLUTTERWAVE */}
+            {checkoutStep === "flutterwave_pay" && (
+              <motion.div
+                key="pay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="max-w-lg mx-auto mt-12 bg-white border border-[#eeeae6] rounded-[2rem] p-8 shadow-xl"
+              >
+                <h3 className="text-2xl font-serif italic mb-6">
+                  Flutterwave Authorization
+                </h3>
 
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[9px] uppercase font-mono tracking-widest text-orange-400 font-bold">
-                    FLUTTERWAVE PAY
-                  </span>
-                  <h4 className="text-lg font-light tracking-wide text-stone-100">
-                    Boutique Escrow
-                  </h4>
-                </div>
-                {/* Flutterwave brand emblem (orange-black circle design) */}
-                <div className="h-9 w-9 bg-orange-500 rounded-full flex items-center justify-center font-bold text-stone-950 text-xs">
-                  FL
-                </div>
-              </div>
-
-              <div className="bg-stone-900/60 p-4 border border-stone-850 rounded-2xl flex justify-between items-center text-xs">
-                <span className="text-stone-400 font-light">
-                  Securing order value:
-                </span>
-                <span className="font-mono text-stone-100 font-semibold">
-                  ${finalTotal.toFixed(2)}
-                </span>
-              </div>
-
-              {/* Secure Form inputs */}
-              <div className="flex flex-col gap-4 text-xs font-sans">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-stone-400 font-light">
-                    Client Full Name
-                  </label>
+                <div className="space-y-4">
                   <input
-                    type="text"
                     value={payName}
                     onChange={(e) => setPayName(e.target.value)}
-                    className="h-10 bg-stone-900 border border-stone-800 rounded-xl px-3 text-stone-200 focus:outline-none focus:border-orange-500"
+                    className="w-full h-12 px-4 border rounded-xl"
                   />
-                </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-stone-400 font-light">
-                    Checkout Email Notification
-                  </label>
                   <input
-                    type="email"
                     value={payEmail}
                     onChange={(e) => setPayEmail(e.target.value)}
-                    className="h-10 bg-stone-900 border border-stone-800 rounded-xl px-3 text-stone-200 focus:outline-none focus:border-orange-500"
+                    className="w-full h-12 px-4 border rounded-xl"
                   />
-                </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-stone-400 font-light">
-                    Contact Number
-                  </label>
                   <input
-                    type="text"
                     value={payPhone}
                     onChange={(e) => setPayPhone(e.target.value)}
-                    className="h-10 bg-stone-900 border border-stone-800 rounded-xl px-3 text-stone-200 focus:outline-none focus:border-orange-500"
+                    className="w-full h-12 px-4 border rounded-xl"
                   />
                 </div>
-              </div>
 
-              {/* Secure simulated card container */}
-              <div className="p-4 bg-gradient-to-tr from-stone-900 to-stone-850 border border-stone-800 rounded-2xl flex items-center gap-3">
-                <div className="w-9 h-9 bg-stone-950 border border-stone-800 rounded flex items-center justify-center text-orange-400">
-                  <CreditCard size={18} />
-                </div>
-                <div className="flex-1 text-left">
-                  <span className="text-[11px] font-semibold tracking-widest text-stone-300 block">
-                    •••• •••• •••• 9401
-                  </span>
-                  <span className="text-[10px] text-stone-500 font-mono uppercase block">
-                    FLUTTERWAVE ESCROW CHOOSE CAPABLE CARD
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-4">
                 <button
-                  onClick={() => setCheckoutStep("cart")}
-                  className="flex-1 h-12 bg-stone-900 border border-stone-800 hover:bg-stone-800 rounded-xl text-xs font-medium tracking-wide text-stone-400 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  id="flutterwave-submit-pay"
                   onClick={executeFlutterwaveSubmission}
-                  className="flex-2 h-12 bg-gradient-to-r from-orange-400 to-amber-300 text-stone-950 font-semibold rounded-xl text-xs tracking-widest uppercase flex justify-center items-center gap-2 cursor-pointer shadow-lg"
+                  className="w-full h-14 mt-8 bg-gradient-to-r from-orange-400 to-amber-300 rounded-2xl font-semibold flex justify-center items-center gap-2"
                 >
-                  Authorize <ChevronRight size={13} />
+                  <CreditCard size={16} />
+                  Authorize Payment
                 </button>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* Step 3: Submitting Shimmer loader */}
-          {checkoutStep === "submitting" && (
-            <motion.div
-              key="submitting_screen"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="py-24 text-center flex flex-col items-center gap-4 max-w-sm mx-auto"
-            >
-              <div className="w-12 h-12 rounded-full border-t-2 border-orange-400 border-r-2 animate-spin" />
-              <div>
-                <h4 className="text-sm font-medium text-stone-200 tracking-wider uppercase font-mono">
-                  Routing Escrow Pipeline
+            {/* LOADING */}
+            {checkoutStep === "submitting" && (
+              <motion.div
+                key="submit"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-28 text-center"
+              >
+                <div className="w-14 h-14 border-4 border-rose-300 border-t-transparent rounded-full animate-spin mx-auto" />
+
+                <h4 className="mt-6 font-serif italic text-2xl">
+                  Processing Ritual...
                 </h4>
-                <p className="text-xs text-stone-500 font-light mt-1">
-                  Flutterwave is negotiating with secure banking institutions.
-                  Please do not close this browser tab.
+
+                <p className="text-[#8a817c] mt-2">
+                  Securely routing your payment via Flutterwave.
                 </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </div>
     </div>
   );
 };

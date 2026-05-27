@@ -246,7 +246,7 @@ export default function Home() {
             className="flex-1 flex flex-col min-h-screen"
           >
             {/* Top Premium Editorial Header Navigation */}
-            <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-md border-b border-[#eeeae6] px-6 py-4 flex justify-between items-center max-w-5xl w-full mx-auto rounded-b-[2rem]">
+            <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-md border-b border-[#eeeae6] px-6 py-4 flex justify-between items-center max-w-5xl w-full mx-auto rounded-b-2rem">
               <div
                 className="flex items-center gap-1.5 cursor-pointer"
                 onClick={() => setActiveScreen("home")}
@@ -409,7 +409,7 @@ export default function Home() {
                             .map((p) => (
                               <div
                                 key={p.id}
-                                className="bg-white border border-[#eeeae6] rounded-[2rem] p-4 flex flex-col gap-3 text-left relative shadow-sm hover:shadow-md transition-all duration-300"
+                                className="bg-white border border-[#eeeae6] rounded-2rem p-4 flex flex-col gap-3 text-left relative shadow-sm hover:shadow-md transition-all duration-300"
                               >
                                 <img
                                   src={p.image}
@@ -632,7 +632,7 @@ export default function Home() {
 
               {/* Product Info columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="aspect-[4/3] sm:aspect-[4/5] rounded-2xl overflow-hidden bg-stone-50 border border-[#eeeae6]">
+                <div className="aspect-4/3 sm:aspect-[4/5] rounded-2xl overflow-hidden bg-stone-50 border border-[#eeeae6]">
                   <img
                     src={selectedProduct.image}
                     alt={selectedProduct.name}

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight } from "lucide-react";
@@ -8,74 +10,130 @@ interface SplashProps {
 
 export const SplashView: React.FC<SplashProps> = ({ onExplore }) => {
   return (
-    <div className="relative min-h-screen bg-[#fcf8f7] flex flex-col justify-between items-center px-6 py-12 overflow-hidden select-none">
-      {/* Background soft ambient glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-rose-300/30 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/3 w-[350px] h-[350px] rounded-full bg-indigo-100/30 blur-[100px] pointer-events-none" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#fffdfd] via-[#fff6f9] to-[#faf3ff] flex flex-col justify-between items-center px-8 py-14 select-none">
+      {/* Luxury ambient blur glows */}
+      <div className="absolute top-[-10%] left-[-5%] w-[520px] h-[520px] rounded-full bg-rose-200/40 blur-[180px]" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[480px] h-[480px] rounded-full bg-violet-200/30 blur-[170px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,.55),transparent_65%)]" />
 
-      {/* Decorative Atelier Frame */}
-      <div className="w-full max-w-md flex justify-between items-center text-[10px] tracking-[0.3em] text-[#8a817c] uppercase font-sans font-bold">
+      {/* floating particles */}
+      {[...Array(10)].map((_, i) => (
+        <motion.div
+          key={i}
+          animate={{
+            y: [0, -18, 0],
+            opacity: [0.4, 1, 0.4],
+          }}
+          transition={{
+            duration: 4 + i,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute rounded-full bg-white/60 backdrop-blur-sm"
+          style={{
+            width: 6 + i,
+            height: 6 + i,
+            top: `${10 + i * 8}%`,
+            left: `${10 + i * 7}%`,
+          }}
+        />
+      ))}
+
+      {/* Top Frame */}
+      <motion.div
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1 }}
+        className="w-full max-w-lg flex justify-between items-center text-[10px] tracking-[0.35em] uppercase text-[#9d8e93] font-semibold"
+      >
         <span>EST. 2026</span>
         <span>MIRAGE ATELIER</span>
         <span>PARIS • NY</span>
-      </div>
+      </motion.div>
 
-      {/* Main Branding Block */}
-      <div className="flex-1 flex flex-col justify-center items-center text-center max-w-md z-10 my-auto">
+      {/* Main Hero */}
+      <div className="flex-1 flex flex-col justify-center items-center text-center max-w-xl relative z-10">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.8, ease: "easeOut" }}
-          className="relative flex flex-col items-center"
+          transition={{ duration: 1.5 }}
+          className="relative"
         >
-          {/* Subtle floral/geometric soft glowing vector line art */}
-          <div className="absolute -top-16 text-rose-500/60 animate-pulse">
-            <Sparkles size={32} className="stroke-[1px]" />
-          </div>
+          {/* sparkle icon */}
+          <motion.div
+            animate={{
+              rotate: [0, 8, -8, 0],
+              scale: [1, 1.08, 1],
+            }}
+            transition={{
+              repeat: Infinity,
+              duration: 5,
+            }}
+            className="absolute -top-20 left-1/2 -translate-x-1/2 text-rose-400"
+          >
+            <Sparkles size={38} strokeWidth={1.2} />
+          </motion.div>
 
-          <h1 className="font-serif text-6xl font-black italic tracking-tighter text-[#1a1a1a] leading-tight uppercase">
+          {/* logo */}
+          <h1 className="font-serif text-7xl md:text-8xl font-black italic tracking-[-0.08em] text-[#181314] drop-shadow-sm">
             Mirage
           </h1>
 
-          <span className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#eeeae6] to-transparent my-6" />
+          {/* divider */}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 140 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="h-[2px] mx-auto rounded-full bg-gradient-to-r from-transparent via-[#d9b67a] to-transparent my-8"
+          />
 
-          <p className="font-sans text-xs md:text-sm text-[#8a817c] tracking-[0.18em] leading-relaxed max-w-[280px] font-medium">
-            LUXURY BEAUTY & COUTURE RITUALS
+          {/* subtitle */}
+          <p className="text-sm md:text-base uppercase tracking-[0.35em] text-[#8e8084] font-medium">
+            Luxury Beauty & Couture Rituals
+          </p>
+
+          {/* description */}
+          <p className="mt-8 text-sm md:text-[15px] text-[#7d7175] leading-relaxed max-w-md mx-auto font-light">
+            Personalized skin intelligence meets elevated beauty commerce —
+            crafted for modern rituals, curated by aesthetic precision.
           </p>
         </motion.div>
       </div>
 
-      {/* CTA Layer */}
-      <div className="w-full max-w-md flex flex-col items-center gap-6 z-10">
-        <p className="text-[11px] text-[#8a817c] font-mono tracking-wider max-w-[280px] text-center leading-relaxed">
-          Experience highly-personalized skin-mapping and TikTok modern social
-          beauty curation.
-        </p>
-
+      {/* CTA */}
+      <div className="w-full max-w-lg flex flex-col items-center gap-7 relative z-10">
         <motion.button
           id="splash-explore-button"
           onClick={onExplore}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{
+            scale: 1.03,
+            y: -2,
+          }}
           whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="group relative w-full h-14 bg-[#1a1a1a] hover:bg-[#333] text-white rounded-full font-sans text-xs font-semibold tracking-[0.2em] uppercase flex justify-center items-center shadow-lg overflow-hidden cursor-pointer transition-colors"
+          className="group relative overflow-hidden w-full h-16 rounded-full bg-gradient-to-r from-[#171314] via-[#2a1e21] to-[#171314] text-white text-xs uppercase tracking-[0.28em] font-semibold shadow-[0_18px_45px_rgba(0,0,0,.18)] border border-white/10"
         >
-          {/* Soft light shimmer */}
-          <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+          {/* shimmer sweep */}
+          <motion.div
+            animate={{ x: ["-120%", "160%"] }}
+            transition={{
+              repeat: Infinity,
+              duration: 3.5,
+              ease: "linear",
+            }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          />
 
-          <span className="flex items-center gap-2">
-            Enter the Ritual
+          <span className="relative flex items-center justify-center gap-3">
+            Enter The Ritual
             <ArrowRight
-              size={14}
+              size={15}
               className="group-hover:translate-x-1 transition-transform"
             />
           </span>
         </motion.button>
 
-        <span className="text-[9px] text-stone-400 tracking-widest uppercase font-mono mt-2">
-          Secure Full-Stack Node Environment
+        <span className="text-[10px] uppercase tracking-[0.28em] text-[#b1a4aa] font-medium">
+          Secure Full-Stack Luxury Commerce
         </span>
       </div>
     </div>
